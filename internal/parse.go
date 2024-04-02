@@ -31,6 +31,10 @@ func ParseAllLoads(inFile string) ([]Load, error) {
 			continue
 		}
 
+		if Debug {
+			fmt.Println(fmt.Sprintf("parsing line: %v", scanner.Text()))
+		}
+
 		l, err := parseLine(scanner.Text())
 		if err != nil {
 			return []Load{}, errors.Wrap(err, fmt.Sprintf("unable to parse line %v", lineNum))

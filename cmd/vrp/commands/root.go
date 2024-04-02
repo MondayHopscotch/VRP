@@ -21,8 +21,8 @@ var rootCmd = &cobra.Command{
 			return err
 		}
 
-		solver := routing.NewSolver(loads)
-		routes := solver.PlanRoutes(6)
+		solver := routing.NewNearestNeighborSolver(loads)
+		routes := solver.PlanRoutes()
 
 		for _, r := range routes {
 			r.PrintLoadNumbers()

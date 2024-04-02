@@ -56,12 +56,18 @@ func (r Route) CompletionCostWithLoad(load Load) float64 {
 	return cost + load.Dropoff.DistanceTo(Point{X: 0, Y: 0})
 }
 
+// CostIncreaseWithLoad returns the increase of cost, assuming the route will return to hub after the provided load is complete
+func (r Route) CostIncreaseWithLoad(load Load) float64 {
+	return r.DistanceTo(load.Pickup) + load.Cost() + load.Dropoff.DistanceTo(Point{})
+}
+
 type Load struct {
 	Number  int
 	Pickup  Point
 	Dropoff Point
 }
 
+// Cost returns the cost for the travel from Pickup to Dropoff for this load
 func (l Load) Cost() float64 {
 	return l.Pickup.DistanceTo(l.Dropoff)
 }
