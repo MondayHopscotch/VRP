@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// pointMatcher is a regex to match parentheses-surrounded x,y coordinates of floating point numbers. Ex: `(1.5,2.9)`
 var pointMatcher = regexp.MustCompile(`\((-?\d+\.?\d*),(-?\d+\.?\d*)\)`)
 
 // ParseAllLoads reads the file at the provided path and parses out a slice of Loads

@@ -13,7 +13,7 @@ type NearestNeighborSolver struct {
 	loads []types.Load
 }
 
-func NewNearestNeighborSolver(loads []types.Load) Solver {
+func NewNearestNeighborSolver(loads []types.Load) NearestNeighborSolver {
 	solver := NearestNeighborSolver{
 		loads: loads,
 	}
@@ -38,30 +38,13 @@ func (n NearestNeighborSolver) PlanRoutes() []types.Route {
 		}
 	}
 
-	roughMinTotal := 0.0
-	visited := []int{0}
-	currentLoadIndex := 0
-	var current types.Load
-	for len(visited) < len(n.loads) {
-		current = n.loads[currentLoadIndex]
-		for _, l := range neighbors[currentLoadIndex] {
-			if !slices.Contains(visited, l.Number) {
-				roughMinTotal += current.Dropoff.DistanceTo(l.Pickup)
-				currentLoadIndex = l.Number
-				visited = append(visited, currentLoadIndex)
-				break
-			}
-		}
-	}
-
-	// Add our final return to depot
-	roughMinTotal += current.Dropoff.DistanceTo(n.loads[0].Pickup)
+	roughMinTotal := n.estimateMinimumTime(neighbors)
 
 	// Each driver has max shift length
 	minDrivers := int(math.Ceil(roughMinTotal / types.DriverMaxTime))
 
 	if internal.Debug {
-		fmt.Println(visited)
+		// fmt.Println(visited)
 		fmt.Println(roughMinTotal)
 		fmt.Println(minDrivers)
 	}
@@ -89,6 +72,31 @@ func (n NearestNeighborSolver) PlanRoutes() []types.Route {
 	}
 
 	return resultRoutes
+}
+
+func (n NearestNeighborSolver) estimateMinimumTime(neighbors map[int][]types.Load) float64 {
+	roughMinTotal := 0.0
+	visited := []int{0}
+	currentLoadIndex := 0
+	var current types.Load
+	for len(visited) < len(n.loads) {
+		current = n.loads[currentLoadIndex]
+
+		for _, l := range neighbors[currentLoadIndex] {
+			if !slices.Contains(visited, l.Number) {
+				roughMinTotal += current.Dropoff.DistanceTo(l.Pickup)
+				roughMinTotal += l.Cost()
+				currentLoadIndex = l.Number
+				visited = append(visited, currentLoadIndex)
+				break
+			}
+		}
+	}
+
+	// Add our final return to depot
+	roughMinTotal += n.loads[currentLoadIndex].Dropoff.DistanceTo(types.HubPoint())
+
+	return roughMinTotal
 }
 
 func (n NearestNeighborSolver) planRoutesForDrivers(startingDrivers int, neighbors map[int][]types.Load) ([]types.Route, float64) {
