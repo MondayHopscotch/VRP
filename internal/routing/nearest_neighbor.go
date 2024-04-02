@@ -27,7 +27,13 @@ func NewNearestNeighborSolver(loads []types.Load) NearestNeighborSolver {
 	return solver
 }
 
-func (n NearestNeighborSolver) PlanRoutes() []types.Route {
+func (n NearestNeighborSolver) PlanRoutes() ([]types.Route, error) {
+	for _, l := range n.loads {
+		if types.HubPoint().DistanceTo(l.Pickup) > types.DriverMaxTime/2 ||
+			types.HubPoint().DistanceTo(l.Dropoff) > types.DriverMaxTime/2 {
+			return []types.Route{}, fmt.Errorf("load %v is too far away for any driver to complete in a single shift", l.Number)
+		}
+	}
 	neighbors := n.getNeighborMap()
 
 	if internal.Debug {
@@ -44,7 +50,6 @@ func (n NearestNeighborSolver) PlanRoutes() []types.Route {
 	minDrivers := int(math.Ceil(roughMinTotal / types.DriverMaxTime))
 
 	if internal.Debug {
-		// fmt.Println(visited)
 		fmt.Println(roughMinTotal)
 		fmt.Println(minDrivers)
 	}
@@ -66,37 +71,12 @@ func (n NearestNeighborSolver) PlanRoutes() []types.Route {
 		}
 	}
 
-	// Prune out our depot 'loads'
+	// Prune out our depot 'loads' from our route
 	for i, r := range resultRoutes {
 		resultRoutes[i] = slices.Delete(r, 0, 1)
 	}
 
-	return resultRoutes
-}
-
-func (n NearestNeighborSolver) estimateMinimumTime(neighbors map[int][]types.Load) float64 {
-	roughMinTotal := 0.0
-	visited := []int{0}
-	currentLoadIndex := 0
-	var current types.Load
-	for len(visited) < len(n.loads) {
-		current = n.loads[currentLoadIndex]
-
-		for _, l := range neighbors[currentLoadIndex] {
-			if !slices.Contains(visited, l.Number) {
-				roughMinTotal += current.Dropoff.DistanceTo(l.Pickup)
-				roughMinTotal += l.Cost()
-				currentLoadIndex = l.Number
-				visited = append(visited, currentLoadIndex)
-				break
-			}
-		}
-	}
-
-	// Add our final return to depot
-	roughMinTotal += n.loads[currentLoadIndex].Dropoff.DistanceTo(types.HubPoint())
-
-	return roughMinTotal
+	return resultRoutes, nil
 }
 
 func (n NearestNeighborSolver) planRoutesForDrivers(startingDrivers int, neighbors map[int][]types.Load) ([]types.Route, float64) {
@@ -147,13 +127,7 @@ func (n NearestNeighborSolver) planRoutesForDrivers(startingDrivers int, neighbo
 		}
 	}
 
-	totalCost := 0.0
-
-	for _, r := range routes {
-		totalCost += r.TotalCostWithDriver()
-	}
-
-	return routes, totalCost
+	return routes, types.GetTotalCostOfRoutes(routes)
 }
 
 func (n NearestNeighborSolver) getNeighborMap() map[int][]types.Load {
@@ -176,4 +150,31 @@ func (n NearestNeighborSolver) getNeighborMap() map[int][]types.Load {
 	}
 
 	return neighbors
+}
+
+// estimateMinimumTime does a rough esimate of the lower bound for time needed to process all loads
+// by traversing the entire set following closest neighbors
+func (n NearestNeighborSolver) estimateMinimumTime(neighbors map[int][]types.Load) float64 {
+	roughMinTotal := 0.0
+	visited := []int{0}
+	currentLoadIndex := 0
+	var current types.Load
+	for len(visited) < len(n.loads) {
+		current = n.loads[currentLoadIndex]
+
+		for _, l := range neighbors[currentLoadIndex] {
+			if !slices.Contains(visited, l.Number) {
+				roughMinTotal += current.Dropoff.DistanceTo(l.Pickup)
+				roughMinTotal += l.Cost()
+				currentLoadIndex = l.Number
+				visited = append(visited, currentLoadIndex)
+				break
+			}
+		}
+	}
+
+	// Add our final return to depot
+	roughMinTotal += n.loads[currentLoadIndex].Dropoff.DistanceTo(types.HubPoint())
+
+	return roughMinTotal
 }

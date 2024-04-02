@@ -12,6 +12,47 @@ func TestConstruction(t *testing.T) {
 	assert.NotNil(t, solver)
 }
 
+func TestEmptyLoads(t *testing.T) {
+	solver := NewNearestNeighborSolver([]types.Load{})
+
+	routes, err := solver.PlanRoutes()
+	assert.Nil(t, err)
+	assert.Empty(t, routes)
+}
+
+func TestSingleLoad(t *testing.T) {
+	loadList := []types.Load{
+		{
+			Number:  1,
+			Pickup:  types.Point{X: 4, Y: 3},
+			Dropoff: types.Point{X: -4, Y: 3},
+		},
+	}
+
+	solver := NewNearestNeighborSolver(loadList)
+
+	routes, err := solver.PlanRoutes()
+	assert.Nil(t, err)
+	assert.Len(t, routes, 1)
+	assert.Equal(t, types.Route(loadList), routes[0])
+}
+
+func TestSingleLoadOutOfRange(t *testing.T) {
+	loadList := []types.Load{
+		{
+			Number:  1,
+			Pickup:  types.Point{X: 0, Y: types.DriverMaxTime/2 + 1},
+			Dropoff: types.Point{X: 0, Y: 1},
+		},
+	}
+
+	solver := NewNearestNeighborSolver(loadList)
+
+	routes, err := solver.PlanRoutes()
+	assert.Empty(t, routes)
+	assert.ErrorContains(t, err, "too far away")
+}
+
 func TestNeighborMap(t *testing.T) {
 	loads := []types.Load{
 		{

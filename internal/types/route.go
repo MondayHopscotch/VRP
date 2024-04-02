@@ -14,6 +14,17 @@ const DriverMaxTime = 12.0 * 60
 // Route is an alias to allow easier calculations to be done on a slice of Loads
 type Route []Load
 
+// GetTotalCostOfRoutes provides a shorthand for totalling the cost of a slice of routes
+func GetTotalCostOfRoutes(routes []Route) float64 {
+	totalCost := 0.0
+
+	for _, r := range routes {
+		totalCost += r.TotalCostWithDriver()
+	}
+
+	return totalCost
+}
+
 // PrintLoadNumbers prints routing arrays to console. Useful for testing output by external utilities
 func (r Route) PrintLoadNumbers() {
 	nums := make([]int, len(r))

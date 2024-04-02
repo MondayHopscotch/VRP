@@ -23,7 +23,10 @@ var rootCmd = &cobra.Command{
 		}
 
 		solver := routing.NewNearestNeighborSolver(loads)
-		routes := solver.PlanRoutes()
+		routes, err := solver.PlanRoutes()
+		if err != nil {
+			return err
+		}
 
 		for _, r := range routes {
 			r.PrintLoadNumbers()

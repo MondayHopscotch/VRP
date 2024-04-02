@@ -65,6 +65,13 @@ func TestParseReader(t *testing.T) {
 	AssertPoint(t, types.Point{X: 3.75, Y: 4.0}, loads[0].Dropoff)
 }
 
+func TestParseReaderBadInput(t *testing.T) {
+	contents := `loadNumber pickup dropoff
+    1 (1.25,2.50) ()`
+	_, err := parseReader(strings.NewReader(contents))
+	assert.ErrorContains(t, err, "unable to parse line 2")
+}
+
 // AssertPoint asserts that the actual Point's X and Y match the expected values
 func AssertPoint(t *testing.T, expected types.Point, actual types.Point) {
 	assert.Equal(t, expected.X, actual.X)

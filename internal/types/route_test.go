@@ -76,3 +76,44 @@ func TestRouteTimeIncrease(t *testing.T) {
 	assert.Equal(t, totalTravelOneLoad, route.CurrentCompletionTime())
 	assert.Equal(t, increase, route.CompletionTimeIncreaseWithLoad(load))
 }
+
+func TestEmptyRoutesCost(t *testing.T) {
+	routes := []Route{}
+	assert.Equal(t, 0.0, GetTotalCostOfRoutes(routes))
+}
+
+func TestSimpleRoutesCost(t *testing.T) {
+	routes := []Route{
+		[]Load{
+			{
+				Number:  0,
+				Pickup:  HubPoint(),
+				Dropoff: HubPoint(),
+			},
+			{
+				Number:  6,
+				Pickup:  Point{X: 2, Y: 0},
+				Dropoff: Point{X: 2, Y: 7},
+			},
+			{
+				Number:  1,
+				Pickup:  Point{X: 1, Y: 3},
+				Dropoff: Point{X: -1, Y: -8},
+			},
+		},
+		[]Load{
+			{
+				Number:  0,
+				Pickup:  HubPoint(),
+				Dropoff: HubPoint(),
+			},
+			{
+				Number:  5,
+				Pickup:  Point{X: 2, Y: 2},
+				Dropoff: Point{X: -4, Y: 1},
+			},
+		},
+	}
+
+	assert.Equal(t, routes[0].TotalCostWithDriver()+routes[1].TotalCostWithDriver(), GetTotalCostOfRoutes(routes))
+}
