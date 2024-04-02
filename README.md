@@ -1,6 +1,6 @@
 # Vehicle Routing Problem
 
-This application provides a simple CLI that ingests a list of loads and outputs a set of driver routes to complete all load pickup/dropoffs while attempting to minimize deadhead.
+This application provides a simple CLI that ingests a list of loads and outputs a set of driver routes to complete all load pickup/dropoffs while attempting to minimize deadhead (drive time without cargo).
 
 ## Instructions
 
@@ -31,7 +31,6 @@ There are a few assumptions made based on time constraints:
 
 This section intends to capture some of my thought process while building this tool
 
-* There is a brute force solver that was used as my test code to familiarize myself with the problem while building out the data structures. This remains in the code, but is incomplete.
 * Nearest Neighbor tweaks
     * The current heuristic assumes that each load added to a given route is the final load, meaning that the return-trip to the hub is part of the calculation when selecting the next load to pickup
         * This provides safety because if we can't find another load for a given driver, their return to hub is already factored into their current route. No recalculation needed.
@@ -40,6 +39,7 @@ This section intends to capture some of my thought process while building this t
     * Getting the proper number of drivers proved underwhelming with NN. I automatically add drivers as loads are unable to be completed by the current set of drivers
         * I attempted to recalculate with varying the number of starting drivers as this intuitively feels like it would yield more optimal routes. However, my NN implementation seemed to yield
           the same results, even when increasing the starting driver count one at a time. For readability and CPU consumption, I reduced this to a single recalculation.
+ * Some test scenarios proved difficult to write a concise unit test to cover, however the provided test samples were able to be used to target certain scenarios such as underestimating the number of drivers needed.
 
 ## Future Enhancements
 
@@ -49,7 +49,7 @@ There are many potential ways to improve the current performance. This section w
     * The current solution follows a Nearest Neighbor heuristic for choosing which load to assign to each route. This is somewhat short sighted and can miss efficiencies
     that may be available when looking one, or even more, loads ahead. This can lead to efficiencies at the cost of code complexity and potential computation time.
 * Raw performance
-    * Despite some of the recalculations with the current heuristic not yielding improved routes/cost. I'm certain there is a heuristic where recalculating with a different set of
+    * Despite some of the recalculations with the current heuristic not yielding improved routes/cost, I'm certain there is a heuristic where recalculating with a different set of
       initial state will yield improved routing. In this scenario, these recalculations can be executed asynchronously to improve overall execution time.
 
 
