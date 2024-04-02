@@ -1,9 +1,9 @@
 package routing
 
 import (
-	"vrp/internal"
+	"vrp/internal/types"
 )
 
 type Solver interface {
-	PlanRoutes() []internal.Route
+	PlanRoutes() []types.Route
 }

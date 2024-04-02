@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"vrp/internal"
+	"vrp/internal/parsing"
 	"vrp/internal/routing"
 
 	"github.com/spf13/cobra"
@@ -16,7 +17,7 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("expected single argument for load file path")
 		}
 
-		loads, err := internal.ParseAllLoads(args[0])
+		loads, err := parsing.ParseAllLoads(args[0])
 		if err != nil {
 			return err
 		}

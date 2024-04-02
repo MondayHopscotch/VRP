@@ -4,18 +4,19 @@ import (
 	"fmt"
 	"math"
 	"vrp/internal"
+	"vrp/internal/types"
 )
 
-func NewBasicSolver(loads []internal.Load) Solver {
-	return &BasicSolver{loads: loads}
+func NewBruteForceSolver(loads []types.Load) Solver {
+	return &BruteForceSolver{loads: loads}
 }
 
-// BasicSolver plans routes basedon a simple greedy algorithm for routing our drives
-type BasicSolver struct {
-	loads []internal.Load
+// BruteForceSolver plans routes basedon a simple greedy algorithm for routing our drives
+type BruteForceSolver struct {
+	loads []types.Load
 }
 
-func (b *BasicSolver) PlanRoutes() []internal.Route {
+func (b *BruteForceSolver) PlanRoutes() []types.Route {
 	// TODO: require at least one driver
 	// TODO: Need to return error if we can't find a set of routes
 
@@ -28,9 +29,9 @@ func (b *BasicSolver) PlanRoutes() []internal.Route {
 	// We have to be careful not to strand drivers
 
 	// TODO: determine number of drivers required
-	routes := make([]internal.Route, 4)
+	routes := make([]types.Route, 4)
 
-	remainingLoads := make(map[int]internal.Load)
+	remainingLoads := make(map[int]types.Load)
 	for _, l := range b.loads {
 		remainingLoads[l.Number] = l
 	}
@@ -51,8 +52,8 @@ func (b *BasicSolver) PlanRoutes() []internal.Route {
 			minIndex := -1
 			var min float64 = math.MaxFloat64
 			for k, l := range remainingLoads {
-				lCost := r.CompletionCostWithLoad(l)
-				if lCost < min && lCost <= 12*60 {
+				lCost := r.CompletionTimeWithLoad(l)
+				if lCost < min && lCost <= types.DriverMaxTime {
 					min = math.Min(min, lCost)
 					minIndex = k
 				}

@@ -6,19 +6,20 @@ import (
 	"slices"
 	"sort"
 	"vrp/internal"
+	"vrp/internal/types"
 )
 
 type NearestNeighborSolver struct {
-	loads []internal.Load
+	loads []types.Load
 }
 
-func NewNearestNeighborSolver(loads []internal.Load) Solver {
+func NewNearestNeighborSolver(loads []types.Load) Solver {
 	solver := NearestNeighborSolver{
 		loads: loads,
 	}
 
 	// Add our depot as a special load that starts and ends at the depot
-	solver.loads = append([]internal.Load{internal.Load{Number: 0, Pickup: internal.Point{}, Dropoff: internal.Point{}}}, solver.loads...)
+	solver.loads = append([]types.Load{types.Load{Number: 0, Pickup: types.HubPoint(), Dropoff: types.Point{}}}, solver.loads...)
 
 	if internal.Debug {
 		fmt.Println(fmt.Sprintf("Nearest Neighbor Solver built with %v loads", len(loads)))
@@ -26,7 +27,7 @@ func NewNearestNeighborSolver(loads []internal.Load) Solver {
 	return solver
 }
 
-func (n NearestNeighborSolver) PlanRoutes() []internal.Route {
+func (n NearestNeighborSolver) PlanRoutes() []types.Route {
 	neighbors := n.getNeighborMap()
 
 	if internal.Debug {
@@ -40,7 +41,7 @@ func (n NearestNeighborSolver) PlanRoutes() []internal.Route {
 	roughMinTotal := 0.0
 	visited := []int{0}
 	currentLoadIndex := 0
-	var current internal.Load
+	var current types.Load
 	for len(visited) < len(n.loads) {
 		current = n.loads[currentLoadIndex]
 		for _, l := range neighbors[currentLoadIndex] {
@@ -56,8 +57,8 @@ func (n NearestNeighborSolver) PlanRoutes() []internal.Route {
 	// Add our final return to depot
 	roughMinTotal += current.Dropoff.DistanceTo(n.loads[0].Pickup)
 
-	// Each driver can only drive for 12 hours
-	minDrivers := math.Ceil(roughMinTotal / (12 * 60))
+	// Each driver has max shift length
+	minDrivers := int(math.Ceil(roughMinTotal / types.DriverMaxTime))
 
 	if internal.Debug {
 		fmt.Println(visited)
@@ -65,12 +66,38 @@ func (n NearestNeighborSolver) PlanRoutes() []internal.Route {
 		fmt.Println(minDrivers)
 	}
 
-	routes := make([]internal.Route, int(minDrivers))
-	for i, _ := range routes {
-		routes[i] = append(routes[i], internal.Load{})
+	resultRoutes, totalCost := n.planRoutesForDrivers(minDrivers, neighbors)
+
+	if len(resultRoutes) != minDrivers {
+		if internal.Debug {
+			fmt.Println(fmt.Sprintf("drivers were added to complete loads (%v -> %v)", minDrivers, len(resultRoutes)))
+		}
+
+		// we had to add drivers. Recalculate and see if starting with extra drivers yields cost improvement
+		newRoutes, newTotalCost := n.planRoutesForDrivers(len(resultRoutes), neighbors)
+		if internal.Debug {
+			fmt.Println(fmt.Sprintf("recalculation with %v drivers yielded cost %v (previous %v", len(resultRoutes), newTotalCost, totalCost))
+		}
+		if newTotalCost < totalCost {
+			resultRoutes = newRoutes
+		}
 	}
 
-	remainingLoads := make(map[int]internal.Load)
+	// Prune out our depot 'loads'
+	for i, r := range resultRoutes {
+		resultRoutes[i] = slices.Delete(r, 0, 1)
+	}
+
+	return resultRoutes
+}
+
+func (n NearestNeighborSolver) planRoutesForDrivers(startingDrivers int, neighbors map[int][]types.Load) ([]types.Route, float64) {
+	routes := make([]types.Route, startingDrivers)
+	for i, _ := range routes {
+		routes[i] = append(routes[i], types.Load{})
+	}
+
+	remainingLoads := make(map[int]types.Load)
 	for _, l := range n.loads {
 		if l.Number == 0 {
 			// we don't need to track our hub
@@ -81,22 +108,17 @@ func (n NearestNeighborSolver) PlanRoutes() []internal.Route {
 
 	var driverFound bool
 	var driver int
-	var nextLoad internal.Load
-	var nearestCost float64
+	var nextLoad types.Load
 	for len(remainingLoads) > 0 {
 		driverFound = false
-		nearestCost = math.MaxFloat64
 		for i, r := range routes {
 			for _, l := range neighbors[r[len(r)-1].Number] {
 				if _, ok := remainingLoads[l.Number]; ok {
-					costIncrease := r.CostIncreaseWithLoad(l)
 					// Check driver capacity
-					newRouteCostCheck := r.CompletionCostWithLoad(l)
-					if costIncrease < nearestCost && newRouteCostCheck <= 12*60 {
+					if r.CompletionTimeWithLoad(l) <= types.DriverMaxTime {
 						driverFound = true
 						driver = i
 						nextLoad = l
-						nearestCost = costIncrease
 
 						// As our neighbors are already sorted by nearest, we minimize deadhead by
 						// going with the first match here and moving on
@@ -111,25 +133,26 @@ func (n NearestNeighborSolver) PlanRoutes() []internal.Route {
 			delete(remainingLoads, nextLoad.Number)
 		} else {
 			if internal.Debug {
-				fmt.Println(fmt.Sprintf("no driver found for remaining loads (%v). Adding driver", remainingLoads))
+				fmt.Println(fmt.Sprintf("no driver found for remaining loads (%v). Adding driver", len(remainingLoads)))
 			}
-			routes = append(routes, internal.Route{internal.Load{}})
+			routes = append(routes, types.Route{types.Load{}})
 		}
 	}
 
-	// Prune out our depot 'loads'
-	for i, r := range routes {
-		routes[i] = slices.Delete(r, 0, 1)
+	totalCost := 0.0
+
+	for _, r := range routes {
+		totalCost += r.TotalCostWithDriver()
 	}
 
-	return routes
+	return routes, totalCost
 }
 
-func (n NearestNeighborSolver) getNeighborMap() map[int][]internal.Load {
-	neighbors := make(map[int][]internal.Load)
+func (n NearestNeighborSolver) getNeighborMap() map[int][]types.Load {
+	neighbors := make(map[int][]types.Load)
 
 	for _, l := range n.loads {
-		closest := make([]internal.Load, 0)
+		closest := make([]types.Load, 0)
 		for _, o := range n.loads {
 			if o == l {
 				continue
