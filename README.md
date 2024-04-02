@@ -1,6 +1,6 @@
 # Vehicle Routing Problem
 
-This application provides a simple CLI that ingests a list of loads and outputs a set of driver routes to complete all load pickup/dropoffs while attempting to minimize deadhead (drive time without cargo).
+This application provides a simple CLI that ingests a list of loads and outputs a set of driver routes to complete all load pickup/dropoffs while attempting to minimize the cost of doing so.
 
 ## Instructions
 
@@ -29,14 +29,14 @@ There are a few assumptions made based on time constraints:
 
 This section intends to capture some of my thought process while building this tool
 
-* Nearest Neighbor tweaks
+* Nearest Neighbor
     * The current heuristic assumes that each load added to a given route is the final load, meaning that the return-trip to the hub is part of the calculation when selecting the next load to pickup
         * This provides safety because if we can't find another load for a given driver, their return to hub is already factored into their current route. No recalculation needed.
-    * I attempted to make certain aspects of the Nearest Neighbor more effective at selecting the next loads to add to the routes, however many of them actually yielded _worse_ performance against the test set
+    * I attempted to make certain aspects of the Nearest Neighbor more effective when selecting the next loads to add to the routes, however many of them actually yielded _worse_ performance against the test set
         * Selecting the next load to add based only on the lowest cost addition to next load dropoff (not accounting for the return to hub time) yielded ~1-2% slower mean cost to the solution
     * Getting the proper number of drivers proved underwhelming with NN. I automatically add drivers as loads are unable to be completed by the current set of drivers
-        * I attempted to recalculate with varying the number of starting drivers as this intuitively feels like it would yield more optimal routes. However, my NN implementation seemed to yield
-          the same results, even when increasing the starting driver count one at a time. For readability and CPU consumption, I reduced this to a single recalculation.
+        * If additional drivers were needed, I attempted to recalculate with varying the number of starting drivers as this intuitively feels like it would yield more optimal routes. However, my NN implementation seemed to yield
+          the same results, even when increasing the starting driver count incrementally. For readability and CPU consumption, I reduced this to a single recalculation.
  * Some test scenarios proved difficult to write a concise unit test to cover, however the provided test samples were able to be used to target certain scenarios such as underestimating the number of drivers needed.
 
 ## Future Enhancements
