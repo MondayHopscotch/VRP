@@ -5,6 +5,7 @@ This application provides a simple CLI that ingests a list of loads and outputs 
 ## Instructions
 
 From a terminal, run `go run cmd/vrp/main.go <path to load file>`
+
     * This tool was built with `golang 1.21.6`, please ensure either this or a newer version of golang is installed prior to running this command
 
 ## Assumptions
