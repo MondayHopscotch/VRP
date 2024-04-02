@@ -1,7 +1,9 @@
 package internal
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -10,6 +12,35 @@ import (
 )
 
 var coordMatcher = regexp.MustCompile(`\((-?\d+\.?\d*),(-?\d+\.?\d*)\)`)
+
+func ParseAllLoads(inFile string) ([]Load, error) {
+	file, err := os.Open(inFile)
+	if err != nil {
+		return []Load{}, errors.Wrap(err, "failed to read load file")
+	}
+	defer file.Close()
+
+	loads := make([]Load, 0)
+
+	scanner := bufio.NewScanner(file)
+	lineNum := 0
+	for scanner.Scan() {
+		lineNum++
+		if lineNum == 1 {
+			// throw out header line
+			continue
+		}
+
+		l, err := parseLine(scanner.Text())
+		if err != nil {
+			return []Load{}, errors.Wrap(err, fmt.Sprintf("unable to parse line %v", lineNum))
+		}
+
+		loads = append(loads, l)
+	}
+
+	return loads, nil
+}
 
 func parseLine(input string) (Load, error) {
 	fields := strings.Fields(input)

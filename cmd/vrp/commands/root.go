@@ -3,6 +3,8 @@ package commands
 import (
 	"fmt"
 	"os"
+	"vrp/internal"
+	"vrp/internal/routing"
 
 	"github.com/spf13/cobra"
 )
@@ -14,11 +16,24 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("expected single argument for load file path")
 		}
 
+		loads, err := internal.ParseAllLoads(args[0])
+		if err != nil {
+			return err
+		}
+
+		solver := routing.NewSolver(loads)
+		routes := solver.PlanRoutes(6)
+
+		for _, r := range routes {
+			r.PrintLoadNumbers()
+		}
 		return nil
 	},
 }
 
+// Execute runs the root command of the vrp cli tool
 func Execute() {
+	rootCmd.PersistentFlags().BoolVar(&internal.Debug, "debug", false, "enable debug output")
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
